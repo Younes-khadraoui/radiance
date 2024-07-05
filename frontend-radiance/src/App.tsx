@@ -4,6 +4,7 @@ import Login from "./components/auth/Login";
 import Home from "./components/home/Home";
 import Header from "./components/home/Header";
 import Account from "./components/account/Account";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -22,10 +23,14 @@ function App() {
           <Route
             path="/account"
             element={
-              <>
-                <Header />
-                <Account />
-              </>
+              <ProtectedRoute
+                element={
+                  <>
+                    <Header />
+                    <Account />
+                  </>
+                }
+              />
             }
           />
           <Route path="/signup" element={<Signup />} />

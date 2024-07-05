@@ -67,7 +67,7 @@ export function LoginForm({ className, ...props }: UserAuthFormProps) {
               disabled={isLoading}
             />
           </div>
-          <Button disabled={isLoading}>Sign In with Email</Button>
+          <Button disabled={isLoading}>Log In with Email</Button>
         </div>
       </form>
     </div>

@@ -1,13 +1,17 @@
 import express from "express";
+import http from "http";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { authRoutes } from "./routes/authRoutes";
-
-const cors = require("cors");
+import { setupSocket } from "./routes/socket";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+setupSocket(server);
+
 const PORT = process.env.PORT || 5000;
 
 const corsOptions = {
@@ -36,4 +40,4 @@ app.get("/", (req, res) => {
   res.send("Welcome to radiance api!");
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

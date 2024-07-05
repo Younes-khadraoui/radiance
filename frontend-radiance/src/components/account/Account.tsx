@@ -10,7 +10,7 @@ const Account = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
-    setUser({ email: "", profilePic: "", admin: false });
+    setUser({ email: "", profilePic: "", admin: false, username: "" });
     navigate("/");
   };
 

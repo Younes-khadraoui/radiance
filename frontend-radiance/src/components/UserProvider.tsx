@@ -5,6 +5,7 @@ interface User {
   email: string;
   profilePic: string;
   admin: boolean;
+  username: string;
 }
 
 interface UserContextType {
@@ -18,6 +19,7 @@ const initialUser: User = {
   email: "",
   profilePic: "",
   admin: false,
+  username: "Anonymous",
 };
 
 const UserContext = createContext<UserContextType>({
