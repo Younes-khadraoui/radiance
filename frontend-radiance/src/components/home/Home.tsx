@@ -45,16 +45,14 @@ const Home = () => {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("authToken") !== null;
     setAuthenticated(isAuthenticated);
-    if (isAuthenticated) {
-      socket.emit("joinGroup", currentGroup || "Global Group");
-    }
 
+    socket.emit("joinGroup", currentGroup);
     socket.on("groupMessages", (groupMessages) => {
       const formattedMessages = groupMessages.map((msg: IMessage) => ({
         ...msg,
         timestamp: new Date(msg.timestamp).toLocaleString(),
       }));
-      setMessages(formattedMessages.reverse());
+      setMessages(formattedMessages);
     });
 
     socket.on("initMessages", (initMessages) => {
@@ -62,7 +60,7 @@ const Home = () => {
         ...msg,
         timestamp: new Date(msg.timestamp).toLocaleString(),
       }));
-      setMessages(formattedMessages.reverse());
+      setMessages(formattedMessages);
     });
 
     socket.on("message", (message) => {
@@ -82,7 +80,7 @@ const Home = () => {
       socket.off("initMessages");
       socket.off("message");
     };
-  }, [authenticated, currentGroup]);
+  }, [currentGroup]);
 
   const sendMessage = () => {
     if (authenticated && input.trim()) {

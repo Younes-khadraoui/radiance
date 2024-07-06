@@ -69,15 +69,22 @@ startApolloServer()
       console.log("New client connected");
 
       socket.join(GLOBAL_GROUP);
-      socket.emit("groupMessages", []);
+      try {
+        const globalGroupMessages = await Message.find({ group: GLOBAL_GROUP })
+          .sort({ timestamp: -1 })
+          .limit(50);
+        socket.emit("groupMessages", globalGroupMessages.reverse());
+      } catch (error) {
+        console.error("Error fetching global group messages:", error);
+      }
 
       socket.on("joinGroup", async (groupName) => {
         try {
+          socket.join(groupName);
           const groupMessages = await Message.find({ group: groupName })
             .sort({ timestamp: -1 })
             .limit(50);
 
-          socket.join(groupName);
           socket.emit("groupMessages", groupMessages.reverse());
         } catch (error) {
           console.error(`Error joining group '${groupName}':`, error);
