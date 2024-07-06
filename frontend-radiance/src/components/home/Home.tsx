@@ -11,6 +11,9 @@ import {
 import io from "socket.io-client";
 import { useUser } from "../UserProvider";
 import userImage from "@/assets/user.webp";
+import CreateGroup from "../groups/CreateGroup";
+import JoinGroup from "../groups/JoinGroup";
+import { useGroupStore } from "@/stores/groupStore";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const socket = io(BACKEND_URL);
@@ -20,18 +23,39 @@ interface IMessage {
   username: string;
   timestamp: string;
   profilePic: string;
+  email: string;
+  group: string;
 }
 
 const Home = () => {
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [input, setInput] = useState<string>("");
   const [authenticated, setAuthenticated] = useState<boolean>(false);
+  const {
+    showCreateGroup,
+    setShowCreateGroup,
+    showJoinGroup,
+    setShowJoinGroup,
+    currentGroup,
+    setCurrentGroup,
+  } = useGroupStore();
 
   const { user } = useUser();
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("authToken") !== null;
     setAuthenticated(isAuthenticated);
+    if (isAuthenticated) {
+      socket.emit("joinGroup", currentGroup || "Global Group");
+    }
+
+    socket.on("groupMessages", (groupMessages) => {
+      const formattedMessages = groupMessages.map((msg: IMessage) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp).toLocaleString(),
+      }));
+      setMessages(formattedMessages.reverse());
+    });
 
     socket.on("initMessages", (initMessages) => {
       const formattedMessages = initMessages.map((msg: IMessage) => ({
@@ -42,20 +66,23 @@ const Home = () => {
     });
 
     socket.on("message", (message) => {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          ...message,
-          timestamp: new Date(message.timestamp).toLocaleString(),
-        },
-      ]);
+      if (message.group === currentGroup || message.group === "Global Group") {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            ...message,
+            timestamp: new Date(message.timestamp).toLocaleString(),
+          },
+        ]);
+      }
     });
 
     return () => {
+      socket.off("groupMessages");
       socket.off("initMessages");
       socket.off("message");
     };
-  }, [authenticated, messages]);
+  }, [authenticated, currentGroup]);
 
   const sendMessage = () => {
     if (authenticated && input.trim()) {
@@ -65,6 +92,7 @@ const Home = () => {
         profilePic: user.profilePic || "",
         timestamp: new Date().toISOString(),
         email: user.email,
+        group: currentGroup || "Global Group",
       };
       socket.emit("message", messageData);
       setInput("");
@@ -81,12 +109,16 @@ const Home = () => {
     }
   };
 
-  const handleJoinGroup = () => {
-    console.log("Join Group");
+  const handleCreateGroup = (groupName: string) => {
+    socket.emit("createGroup", groupName);
+    setCurrentGroup(groupName);
+    setShowCreateGroup(false);
   };
 
-  const handleCreateGroup = () => {
-    console.log("Create Group");
+  const handleJoinGroup = (groupName: string) => {
+    socket.emit("joinGroup", groupName);
+    setCurrentGroup(groupName);
+    setShowJoinGroup(false);
   };
 
   return (
@@ -144,7 +176,7 @@ const Home = () => {
       <div className="bg-white w-96 rounded-2xl bg-opacity-10">
         <div className="flex justify-center items-center">
           <p className="text-white text-xl text-center p-2 font-medium">
-            Global Group
+            {currentGroup || "Global Group"}
           </p>
           <DropdownMenu>
             <DropdownMenuTrigger className="outline-none cursor-pointer">
@@ -155,13 +187,13 @@ const Home = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer"
-                onClick={handleCreateGroup}
+                onClick={() => setShowCreateGroup(true)}
               >
                 Create Group
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer"
-                onClick={handleJoinGroup}
+                onClick={() => setShowJoinGroup(true)}
               >
                 Join Group
               </DropdownMenuItem>
@@ -169,6 +201,8 @@ const Home = () => {
           </DropdownMenu>
         </div>
       </div>
+      {showCreateGroup && <CreateGroup onCreateGroup={handleCreateGroup} />}
+      {showJoinGroup && <JoinGroup onJoinGroup={handleJoinGroup} />}
     </div>
   );
 };

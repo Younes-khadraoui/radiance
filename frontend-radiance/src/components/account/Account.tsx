@@ -5,7 +5,6 @@ import { useUser } from "../UserProvider";
 
 const Account = () => {
   const { user, setUser } = useUser();
-  console.log(user);
   const navigate = useNavigate();
 
   const handleLogout = () => {

@@ -6,6 +6,7 @@ export interface IMessage extends Document {
   timestamp: Date;
   email: string;
   profilePic?: string;
+  group: string;
 }
 
 const messageSchema: Schema<IMessage> = new mongoose.Schema({
@@ -14,6 +15,7 @@ const messageSchema: Schema<IMessage> = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   email: { type: String, required: true },
   profilePic: { type: String, default: "" },
+  group: { type: String, required: true },
 });
 
 export const Message = mongoose.model<IMessage>("Message", messageSchema);
