@@ -17,7 +17,7 @@ export const theme = {
   },
   extend: {
     backgroundImage: {
-      hollow: "url('./src/assets/bg.png')",
+      hollow: "url('/src/assets/bg.png')",
     },
     colors: {
       border: "hsl(var(--border))",
