@@ -1,46 +1,38 @@
 import * as React from "react";
-import axios from "axios";
+import { useMutation } from "@apollo/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { REGISTER_USER } from "@/graphql/mutations";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 export function SignupForm({ className, ...props }: UserAuthFormProps) {
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
   const [username, setUsername] = React.useState<string>("");
-  const [error, setError] = React.useState<string | null>(null);
+  const [registerUser, { loading, error }] = useMutation(REGISTER_USER);
 
   const navigate = useNavigate();
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
-    setIsLoading(true);
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
-        email,
-        username,
-        password,
+      const { data } = await registerUser({
+        variables: { email, username, password },
       });
-      const { token } = response.data;
+      const token = data?.registerUser.token;
       localStorage.setItem("authToken", token);
 
-      setIsLoading(false);
       setEmail("");
       setPassword("");
       setUsername("");
-      setError(null);
       navigate("/");
-      window.location.reload(); 
+      window.location.reload();
     } catch (error) {
       console.error("Signup failed:", error);
-      setIsLoading(false);
     }
   }
 
@@ -61,7 +53,7 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
               autoCorrect="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              disabled={loading}
             />
             <Label className="sr-only" htmlFor="username">
               Username
@@ -72,7 +64,7 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
               autoCapitalize="none"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              disabled={isLoading}
+              disabled={loading}
             />
             <Label className="sr-only" htmlFor="password">
               Password
@@ -84,11 +76,11 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
+              disabled={loading}
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <Button disabled={isLoading}>Sign up with Email</Button>
+          {error && <p className="text-red-500 text-sm">{error.message}</p>}
+          <Button disabled={loading}>Sign up with Email</Button>
         </div>
       </form>
     </div>

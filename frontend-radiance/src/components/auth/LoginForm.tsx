@@ -1,38 +1,40 @@
 import * as React from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useMutation } from "@apollo/client";
+import { LOGIN_USER } from "@/graphql/mutations";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 export function LoginForm({ className, ...props }: UserAuthFormProps) {
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
+  const [LoginUser, { loading, error }] = useMutation(LOGIN_USER);
 
   const navigate = useNavigate();
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
-    setIsLoading(true);
 
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
-        email,
-        password,
+      const { data } = await LoginUser({
+        variables: {
+          email,
+          password,
+        },
       });
-      const { token } = response.data;
-      localStorage.setItem("authToken", token);
+      if (data && data.login && data.login.token) {
+        const { token } = data.login;
+        localStorage.setItem("authToken", token);
+      } else {
+        console.error("Login failed: Unable to retrieve token from response.");
+      }
       navigate("/");
       window.location.reload();
     } catch (error) {
       console.error("Login failed:", error);
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -53,7 +55,7 @@ export function LoginForm({ className, ...props }: UserAuthFormProps) {
               autoCorrect="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              disabled={loading}
             />
             <Label className="sr-only" htmlFor="password">
               Password
@@ -65,10 +67,11 @@ export function LoginForm({ className, ...props }: UserAuthFormProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              disabled={isLoading}
+              disabled={loading}
             />
           </div>
-          <Button disabled={isLoading}>Log In with Email</Button>
+          {error && <p className="text-red-500">{error.message}</p>}
+          <Button disabled={loading}>Log In with Email</Button>
         </div>
       </form>
     </div>

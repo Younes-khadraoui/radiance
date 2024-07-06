@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import axios from "axios";
+import { useQuery } from "@apollo/client";
+import { gql } from "@apollo/client";
 
 interface User {
   email: string;
@@ -13,8 +14,6 @@ interface UserContextType {
   setUser: React.Dispatch<React.SetStateAction<User>>;
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 const initialUser: User = {
   email: "",
   profilePic: "",
@@ -27,32 +26,28 @@ const UserContext = createContext<UserContextType>({
   setUser: () => {},
 });
 
+const FETCH_USER = gql`
+  query {
+    account {
+      email
+      profilePic
+      admin
+      username
+    }
+  }
+`;
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User>(initialUser);
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem("authToken");
-        if (token) {
-          const response = await axios.get<User>(
-            `${BACKEND_URL}/api/auth/account`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          setUser(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
+  const { data, loading, error } = useQuery(FETCH_USER);
 
-    fetchUserData();
-  }, []);
+  useEffect(() => {
+    if (data && !loading && !error) {
+      setUser(data.account);
+    }
+  }, [data, loading, error]);
 
   return (
     <UserContext.Provider value={{ user, setUser }}>
