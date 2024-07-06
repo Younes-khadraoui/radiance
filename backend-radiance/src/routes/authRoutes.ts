@@ -10,7 +10,7 @@ dotenv.config();
 export const authRoutes = express.Router();
 
 authRoutes.post("/register", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, username, password } = req.body;
 
   try {
     let user = await User.findOne({ email });
@@ -18,14 +18,28 @@ authRoutes.post("/register", async (req: Request, res: Response) => {
       return res.status(400).json({ msg: "User already exists" });
     }
 
-    user = new User({ email, password });
+    user = new User({ email, username, password });
 
     const salt = await bcrypt.genSalt(12);
     user.password = await bcrypt.hash(password, salt);
 
     await user.save();
 
-    res.json({ msg: "User registered successfully" });
+    const payload = {
+      user: {
+        id: user.id,
+      },
+    };
+
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET as string,
+      { expiresIn: "1h" },
+      (err, token) => {
+        if (err) throw err;
+        res.json({ token });
+      }
+    );
   } catch (err) {
     console.error(err);
     res.status(500).send("Server Error");
@@ -73,6 +87,7 @@ authRoutes.get(
   async (req: Request, res: Response) => {
     try {
       const user = await User.findById(req.user?.id).select("-password");
+      console.log("User data fetched successfully");
       res.json(user);
     } catch (err) {
       console.error(err);

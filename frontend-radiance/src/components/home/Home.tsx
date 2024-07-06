@@ -10,29 +10,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import io from "socket.io-client";
 import { useUser } from "../UserProvider";
+import userImage from "@/assets/user.webp";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const socket = io(BACKEND_URL);
 
-socket.on("connect", () => {});
-
-socket.on("message", (message) => {
-  console.log("Received message:", message);
-});
-
-socket.on("disconnect", () => {
-  console.log("Disconnected from socket.io server");
-});
+interface IMessage {
+  message: string;
+  username: string;
+  timestamp: string;
+  profilePic: string;
+}
 
 const Home = () => {
-  const [messages, setMessages] = useState<
-    {
-      message: string;
-      username: string;
-      timestamp: string;
-      profilePic: string;
-    }[]
-  >([]);
+  const [messages, setMessages] = useState<IMessage[]>([]);
   const [input, setInput] = useState<string>("");
   const [authenticated, setAuthenticated] = useState<boolean>(false);
 
@@ -42,12 +33,26 @@ const Home = () => {
     const isAuthenticated = localStorage.getItem("authToken") !== null;
     setAuthenticated(isAuthenticated);
 
+    socket.on("initMessages", (initMessages) => {
+      const formattedMessages = initMessages.map((msg: IMessage) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp).toLocaleString(),
+      }));
+      setMessages(formattedMessages.reverse());
+    });
+
     socket.on("message", (message) => {
-      console.log("Received message from server:", message);
-      setMessages((prevMessages) => [...prevMessages, message]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          ...message,
+          timestamp: new Date(message.timestamp).toLocaleString(),
+        },
+      ]);
     });
 
     return () => {
+      socket.off("initMessages");
       socket.off("message");
     };
   }, [authenticated, messages]);
@@ -58,9 +63,9 @@ const Home = () => {
         message: input,
         username: user.username,
         profilePic: user.profilePic || "",
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: new Date().toISOString(),
+        email: user.email,
       };
-      console.log("Sending message:", messageData);
       socket.emit("message", messageData);
       setInput("");
     }
@@ -88,13 +93,31 @@ const Home = () => {
     <div className="flex h-screen p-20 justify-between gap-10">
       <div className="bg-white w-full rounded-2xl bg-opacity-10 relative pt-2">
         {messages.map((message, index) => (
-          <p key={index} className="px-4 pt-2 text-white text-xl">
-            {message.message +
-              " - " +
-              message.username +
-              " - " +
-              message.timestamp}
-          </p>
+          <div
+            key={index}
+            className="px-4 pt-2 text-white flex gap-3 items-center"
+          >
+            <div>
+              <img
+                className="w-8 h-8 rounded-full inline-block"
+                src={message.profilePic || userImage}
+                alt="profile"
+              />
+            </div>
+            <div>
+              <div>
+                <span
+                  className={`font-bold ${
+                    message.username === user.username ? "text-yellow-400" : ""
+                  }`}
+                >
+                  {message.username}
+                </span>{" "}
+                : <span className="text-sm">{message.timestamp}</span>
+              </div>
+              <div> {message.message}</div>
+            </div>
+          </div>
         ))}
         <div className="absolute w-full bottom-0 p-4">
           <div className="bg-white  flex justify-center items-center px-4 rounded-2xl">

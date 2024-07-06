@@ -5,12 +5,11 @@ import { useUser } from "../UserProvider";
 
 const Account = () => {
   const { user, setUser } = useUser();
-  console.log(user);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
-    setUser({ email: "", profilePic: "", admin: false, username: "" });
+    setUser({ email: "", profilePic: "", admin: false, username: "Anonymous" });
     navigate("/");
   };
 

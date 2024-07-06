@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useNavigate } from "react-router-dom";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -12,6 +13,10 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
+  const [username, setUsername] = React.useState<string>("");
+  const [error, setError] = React.useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
@@ -20,13 +25,19 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
     try {
       const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
         email,
+        username,
         password,
       });
-      console.log(response.data);
+      const { token } = response.data;
+      localStorage.setItem("authToken", token);
 
       setIsLoading(false);
       setEmail("");
       setPassword("");
+      setUsername("");
+      setError(null);
+      navigate("/");
+      window.location.reload(); 
     } catch (error) {
       console.error("Signup failed:", error);
       setIsLoading(false);
@@ -52,6 +63,17 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
             />
+            <Label className="sr-only" htmlFor="username">
+              Username
+            </Label>
+            <Input
+              id="username"
+              placeholder="Radiance Username"
+              autoCapitalize="none"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
+            />
             <Label className="sr-only" htmlFor="password">
               Password
             </Label>
@@ -65,6 +87,7 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
               disabled={isLoading}
             />
           </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <Button disabled={isLoading}>Sign up with Email</Button>
         </div>
       </form>

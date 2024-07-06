@@ -31,7 +31,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User>(initialUser);
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
