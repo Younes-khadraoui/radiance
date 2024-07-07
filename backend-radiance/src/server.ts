@@ -60,6 +60,7 @@ const io = new SocketServer(server, {
   cors: {
     origin: process.env.ALLOWED_ORIGIN as string,
     methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   },
 });
 
