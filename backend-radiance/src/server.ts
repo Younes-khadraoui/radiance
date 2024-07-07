@@ -19,6 +19,8 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 const GLOBAL_GROUP = "Global Group";
 
+console.log("Allowed Origin:", process.env.ALLOWED_ORIGIN);
+
 const corsOptions = {
   origin: [process.env.ALLOWED_ORIGIN as string],
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -60,7 +62,7 @@ const io = new SocketServer(server, {
   cors: {
     origin: process.env.ALLOWED_ORIGIN as string,
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 
