@@ -120,8 +120,8 @@ const Home = () => {
   };
 
   return (
-    <div className="flex h-screen p-20 justify-between gap-10">
-      <div className="bg-white w-full rounded-2xl bg-opacity-10 relative pt-2">
+    <div className="flex h-screen p-10 pt-20 lg:p-20 flex-col lg:flex-row lg:justify-between gap-10">
+      <div className="bg-white w-full rounded-2xl bg-opacity-10 relative pt-2 order-2 lg:order-1 flex-1">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -171,7 +171,7 @@ const Home = () => {
           </div>
         </div>
       </div>
-      <div className="bg-white w-96 rounded-2xl bg-opacity-10">
+      <div className="bg-white  rounded-2xl bg-opacity-10 order-1 lg:order-2 w-full lg:w-96">
         <div className="flex justify-center items-center">
           <p className="text-white text-xl text-center p-2 font-medium">
             {currentGroup || "Global Group"}
