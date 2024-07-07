@@ -14,7 +14,7 @@ import { Group } from "./models/groupModel";
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
+const httpServer = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
 const GLOBAL_GROUP = "Global Group";
@@ -58,7 +58,7 @@ async function startApolloServer() {
   apolloServer.applyMiddleware({ app });
 }
 
-const io = new SocketServer(server, {
+const io = new SocketServer(httpServer, {
   cors: {
     origin: process.env.ALLOWED_ORIGIN as string,
     methods: ["GET", "POST"],
@@ -66,98 +66,96 @@ const io = new SocketServer(server, {
   },
 });
 
-startApolloServer()
-  .then(() => {
-    io.on("connection", async (socket) => {
-      console.log("New client connected");
+io.on("connection", async (socket) => {
+  console.log("New client connected");
 
-      socket.join(GLOBAL_GROUP);
-      try {
-        const globalGroupMessages = await Message.find({ group: GLOBAL_GROUP })
-          .sort({ timestamp: -1 })
-          .limit(50);
-        socket.emit("groupMessages", globalGroupMessages.reverse());
-      } catch (error) {
-        console.error("Error fetching global group messages:", error);
-      }
+  socket.join(GLOBAL_GROUP);
+  try {
+    const globalGroupMessages = await Message.find({ group: GLOBAL_GROUP })
+      .sort({ timestamp: -1 })
+      .limit(50);
+    socket.emit("groupMessages", globalGroupMessages.reverse());
+  } catch (error) {
+    console.error("Error fetching global group messages:", error);
+  }
 
-      socket.on("joinGroup", async (groupName) => {
-        try {
-          socket.join(groupName);
-          const groupMessages = await Message.find({ group: groupName })
-            .sort({ timestamp: -1 })
-            .limit(50);
+  socket.on("joinGroup", async (groupName) => {
+    try {
+      socket.join(groupName);
+      const groupMessages = await Message.find({ group: groupName })
+        .sort({ timestamp: -1 })
+        .limit(50);
 
-          socket.emit("groupMessages", groupMessages.reverse());
-        } catch (error) {
-          console.error(`Error joining group '${groupName}':`, error);
-        }
-      });
-
-      socket.on("createGroup", async (groupName) => {
-        try {
-          const group = new Group({ name: groupName, users: [] });
-          await group.save();
-          socket.join(groupName);
-          socket.emit("groupCreated", group);
-        } catch (error) {
-          console.error(`Error creating group '${groupName}':`, error);
-        }
-      });
-
-      socket.on("message", async (message) => {
-        try {
-          const { username, message: msg, email, group } = message;
-
-          const newMessage = new Message({
-            username: username,
-            message: msg,
-            timestamp: new Date(),
-            email: email,
-            group: group || GLOBAL_GROUP,
-          });
-
-          await newMessage.save();
-
-          if (group) {
-            io.to(group).emit("message", {
-              ...message,
-              timestamp: newMessage.timestamp.toLocaleString(),
-            });
-          } else {
-            io.to(GLOBAL_GROUP).emit("message", {
-              ...message,
-              timestamp: newMessage.timestamp.toLocaleString(),
-            });
-          }
-        } catch (error) {
-          console.error("Error saving message to MongoDB:", error);
-        }
-      });
-
-      socket.on("disconnect", () => {
-        console.log("Client disconnected");
-      });
-
-      socket.on("initMessages", async (groupName) => {
-        try {
-          const messages = await Message.find({ group: groupName })
-            .sort({ timestamp: -1 })
-            .limit(50);
-          socket.emit("initMessages", messages);
-        } catch (error) {
-          console.error(
-            `Error fetching initial messages for group '${groupName}':`,
-            error
-          );
-        }
-      });
-    });
-
-    server.listen(PORT, () =>
-      console.log(`Server running at http://localhost:${PORT}`)
-    );
-  })
-  .catch((error) => {
-    console.error("Error starting Apollo Server:", error);
+      socket.emit("groupMessages", groupMessages.reverse());
+    } catch (error) {
+      console.error(`Error joining group '${groupName}':`, error);
+    }
   });
+
+  socket.on("createGroup", async (groupName) => {
+    try {
+      const group = new Group({ name: groupName, users: [] });
+      await group.save();
+      socket.join(groupName);
+      socket.emit("groupCreated", group);
+    } catch (error) {
+      console.error(`Error creating group '${groupName}':`, error);
+    }
+  });
+
+  socket.on("message", async (message) => {
+    try {
+      const { username, message: msg, email, group } = message;
+
+      const newMessage = new Message({
+        username: username,
+        message: msg,
+        timestamp: new Date(),
+        email: email,
+        group: group || GLOBAL_GROUP,
+      });
+
+      await newMessage.save();
+
+      if (group) {
+        io.to(group).emit("message", {
+          ...message,
+          timestamp: newMessage.timestamp.toLocaleString(),
+        });
+      } else {
+        io.to(GLOBAL_GROUP).emit("message", {
+          ...message,
+          timestamp: newMessage.timestamp.toLocaleString(),
+        });
+      }
+    } catch (error) {
+      console.error("Error saving message to MongoDB:", error);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected");
+  });
+
+  socket.on("initMessages", async (groupName) => {
+    try {
+      const messages = await Message.find({ group: groupName })
+        .sort({ timestamp: -1 })
+        .limit(50);
+      socket.emit("initMessages", messages);
+    } catch (error) {
+      console.error(
+        `Error fetching initial messages for group '${groupName}':`,
+        error
+      );
+    }
+  });
+});
+
+httpServer.listen(PORT, () =>
+  console.log(`Server running at http://localhost:${PORT}`)
+);
+
+startApolloServer().catch((error) => {
+  console.error("Error starting Apollo Server:", error);
+});
