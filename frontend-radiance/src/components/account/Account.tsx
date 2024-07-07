@@ -34,9 +34,6 @@ const Account = () => {
           <Button variant="destructive" onClick={handleLogout}>
             Logout
           </Button>
-          {user.admin && (
-            <Button onClick={() => navigate("/dashboard")}>Dashboard</Button>
-          )}
         </div>
       </div>
     </div>

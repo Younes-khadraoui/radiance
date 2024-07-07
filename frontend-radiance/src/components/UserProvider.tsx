@@ -44,8 +44,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   const { data, loading, error } = useQuery(FETCH_USER);
 
   useEffect(() => {
-    if (data && !loading && !error) {
-      setUser(data.account);
+    if (!loading && !error) {
+      if (data && data.account) {
+        setUser(data.account);
+      } else {
+        setUser(initialUser);
+      }
     }
   }, [data, loading, error]);
 
