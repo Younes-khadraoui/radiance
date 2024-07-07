@@ -28,7 +28,7 @@ const resolvers = {
 
         const payload = { user: { id: user.id } };
         const token = jwt.sign(payload, process.env.JWT_SECRET as string, {
-          expiresIn: "1h",
+          expiresIn: "10h",
         });
 
         return { ...user.toObject(), token };

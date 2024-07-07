@@ -23,7 +23,7 @@ export function SignupForm({ className, ...props }: UserAuthFormProps) {
       const { data } = await registerUser({
         variables: { email, username, password },
       });
-      const token = data?.registerUser.token;
+      const token = data?.register.token;
       localStorage.setItem("authToken", token);
 
       setEmail("");
