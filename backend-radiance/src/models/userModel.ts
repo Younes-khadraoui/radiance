@@ -7,6 +7,9 @@ export interface IUser extends Document {
   username: string;
   profilePic?: string;
   admin: boolean;
+  joinedGroups?: string[];
+  online: boolean;
+  socketId: string;
 }
 
 const userSchema: Schema<IUser> = new Schema({
@@ -15,6 +18,9 @@ const userSchema: Schema<IUser> = new Schema({
   username: { type: String, required: true },
   profilePic: { type: String, default: "" },
   admin: { type: Boolean, default: false },
+  joinedGroups: { type: [String], default: ["Global Group"] },
+  online: { type: Boolean, default: false },
+  socketId: { type: String, default: "" },
 });
 
 export const User = mongoose.model<IUser>("User", userSchema);

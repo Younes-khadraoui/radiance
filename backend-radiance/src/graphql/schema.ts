@@ -8,11 +8,26 @@ const typeDefs = gql`
     profilePic: String
     admin: Boolean
     token: String
+    joinedGroups: [String]
+    online: Boolean 
+  }
+
+  type Group {
+    id: ID!
+    name: String!
+    users: [User!]!
+    messages: [Message!]!
   }
 
   type AuthPayload {
     token: String
     user: User
+  }
+
+  type Message {
+    user: User!
+    message: String!
+    timestamp: String!
   }
 
   input RegisterInput {
@@ -28,11 +43,16 @@ const typeDefs = gql`
 
   type Query {
     account: User
+    getGroupMembers(groupName: String!): [User!]!
   }
 
   type Mutation {
     register(input: RegisterInput!): AuthPayload
     login(input: LoginInput!): AuthPayload
+    joinGroup(groupName: String!): User
+    createGroup(groupName: String!): Group
+    quitGroup(groupName: String!): User
+    updateProfilePicture(profilePic: String!): User
   }
 `;
 

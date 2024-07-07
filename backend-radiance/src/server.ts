@@ -10,6 +10,7 @@ import { Server as SocketServer } from "socket.io";
 import { contextMiddleware } from "./middlewares/contextMiddleware";
 import { Message } from "./models/messageModel";
 import { Group } from "./models/groupModel";
+import { User } from "./models/userModel";
 
 dotenv.config();
 
@@ -133,8 +134,25 @@ io.on("connection", async (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on("userConnected", async ({ username }) => {
+    console.log("User connected:", username);
+    try {
+      const updatedUser = await User.findOneAndUpdate(
+        { username: username },
+        { online: true },
+        { new: true }
+      );
+      if (!updatedUser) {
+        console.error(`User with username ${username} not found.`);
+      }
+    } catch (error) {
+      console.error("Error updating user online status:", error);
+    }
+  });
+  
+  socket.on("disconnect", async () => {
     console.log("Client disconnected");
+    await User.findOneAndUpdate({ socketId: socket.id }, { online: false });
   });
 
   socket.on("initMessages", async (groupName) => {

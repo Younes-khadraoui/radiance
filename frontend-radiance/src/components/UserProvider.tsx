@@ -1,12 +1,14 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useQuery } from "@apollo/client";
-import { gql } from "@apollo/client";
+import { FETCH_USER } from "@/graphql/mutations";
 
-interface User {
+export interface User {
   email: string;
   profilePic: string;
   admin: boolean;
   username: string;
+  joinedGroups: string[];
+  online: boolean;
 }
 
 interface UserContextType {
@@ -18,24 +20,15 @@ const initialUser: User = {
   email: "",
   profilePic: "",
   admin: false,
-  username: "Anonymous",
+  username: "",
+  joinedGroups: ["Global Group"],
+  online: false,
 };
 
 const UserContext = createContext<UserContextType>({
   user: initialUser,
   setUser: () => {},
 });
-
-const FETCH_USER = gql`
-  query {
-    account {
-      email
-      profilePic
-      admin
-      username
-    }
-  }
-`;
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
   children,

@@ -14,6 +14,6 @@ export const useGroupStore = create<IGroupStore>((set) => ({
   setShowCreateGroup: (value: boolean) => set({ showCreateGroup: value }),
   showJoinGroup: false,
   setShowJoinGroup: (value: boolean) => set({ showJoinGroup: value }),
-  currentGroup: "Global Group",
+  currentGroup: "",
   setCurrentGroup: (groupName: string) => set({ currentGroup: groupName }),
 }));
