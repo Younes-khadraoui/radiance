@@ -134,8 +134,23 @@ io.on("connection", async (socket) => {
     }
   });
 
-  socket.on("userConnected", async ({ username }) => {
+  socket.on("userConnected", async ({ username, socketId }) => {
     console.log("User connected:", username);
+    try {
+      const user = await User.findOneAndUpdate(
+        { username: username },
+        { socketId: socketId, online: true },
+        { new: true }
+      );
+
+      if (user) {
+        console.log("User online status updated:", user);
+      } else {
+        console.log("User with username not found.");
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+    }
     try {
       const updatedUser = await User.findOneAndUpdate(
         { username: username },
@@ -144,14 +159,15 @@ io.on("connection", async (socket) => {
       );
       if (!updatedUser) {
         console.error(`User with username ${username} not found.`);
-      }
+      } else [console.log("User online status updated:", updatedUser)];
     } catch (error) {
       console.error("Error updating user online status:", error);
     }
   });
-  
-  socket.on("disconnect", async () => {
+
+  socket.on("userDisconnect", async () => {
     console.log("Client disconnected");
+    console.log("Socket ID:", socket.id);
     await User.findOneAndUpdate({ socketId: socket.id }, { online: false });
   });
 

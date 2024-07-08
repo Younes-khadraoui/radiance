@@ -7,12 +7,10 @@ import { useMutation } from "@apollo/client";
 import { UPDATE_PROFILE_PICTURE } from "@/graphql/mutations";
 import userImage from "@/assets/user.png";
 import { Pen } from "lucide-react";
-import io from "socket.io-client";
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-const socket = io(BACKEND_URL);
+import useSocketStore from "@/stores/socketStore";
 
 const Account = () => {
+  const { socket } = useSocketStore();
   const { user, setUser } = useUser();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
@@ -47,7 +45,7 @@ const Account = () => {
       online: false,
     });
     localStorage.removeItem("currentGroup");
-    socket.emit("disconnect");
+    socket?.emit("userDisconnect");
     navigate("/");
   };
 

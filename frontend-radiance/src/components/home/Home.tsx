@@ -1,5 +1,5 @@
 import { ChevronDown, FilePlus2, Send } from "lucide-react";
-import { useState, useEffect, ChangeEvent, KeyboardEvent } from "react";
+import { useState, useEffect, ChangeEvent, KeyboardEvent, useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import io from "socket.io-client";
 import { useUser, User } from "../UserProvider";
 import CreateGroup from "../groups/CreateGroup";
 import JoinGroup from "../groups/JoinGroup";
@@ -16,9 +15,7 @@ import { useGroupStore } from "@/stores/groupStore";
 import { useMutation, useQuery } from "@apollo/client";
 import { JOIN_GROUP, QUIT_GROUP, GET_GROUP_MEMBERS } from "@/graphql/mutations";
 import userImage from "@/assets/user.png";
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-const socket = io(BACKEND_URL);
+import useSocketStore from "@/stores/socketStore";
 
 interface IMessage {
   message: string;
@@ -30,6 +27,9 @@ interface IMessage {
 }
 
 const Home = () => {
+  const { socket } = useSocketStore();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [input, setInput] = useState<string>("");
   const [authenticated, setAuthenticated] = useState<boolean>(false);
@@ -57,29 +57,42 @@ const Home = () => {
   });
 
   useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
     const isAuthenticated = localStorage.getItem("authToken") !== null;
     setAuthenticated(isAuthenticated);
 
     const savedGroup = localStorage.getItem("currentGroup");
     if (savedGroup && savedGroup !== currentGroup) {
       setCurrentGroup(savedGroup);
-      socket.emit("joinGroup", savedGroup);
+      socket?.emit("joinGroup", savedGroup);
     }
-    if (isAuthenticated) {
-      socket.emit("userConnected", { username: user.username });
+    if (isAuthenticated && user.username) {
+      socket?.emit("userConnected", {
+        username: user.username,
+        socketId: socket?.id,
+      });
     }
-  }, [currentGroup, setCurrentGroup, user.username]);
+    return () => {
+      socket?.off("groupMessages");
+    };
+  }, [currentGroup, setCurrentGroup, user.username, socket]);
 
   useEffect(() => {
-    socket.emit("joinGroup", currentGroup);
-    socket.on("groupMessages", (groupMessages) => {
+    socket?.emit("joinGroup", currentGroup);
+    socket?.on("groupMessages", (groupMessages) => {
       const formattedMessages = groupMessages.map((msg: IMessage) => ({
         ...msg,
         timestamp: new Date(msg.timestamp).toLocaleString(),
       }));
       setMessages(formattedMessages);
     });
-    socket.on("initMessages", (initMessages) => {
+    socket?.on("initMessages", (initMessages) => {
       console.log("initMessages", initMessages);
       if (initMessages.group === currentGroup) {
         setMessages((prevMessages) => [
@@ -92,7 +105,7 @@ const Home = () => {
         ]);
       }
     });
-    socket.on("message", (message) => {
+    socket?.on("message", (message) => {
       console.log("initMessages", message);
       if (message.group === currentGroup) {
         setMessages((prevMessages) => [
@@ -106,11 +119,11 @@ const Home = () => {
       }
     });
     return () => {
-      socket.off("groupMessages");
-      socket.off("initMessages");
-      socket.off("message");
+      socket?.off("groupMessages");
+      socket?.off("initMessages");
+      socket?.off("message");
     };
-  }, [currentGroup]);
+  }, [currentGroup, socket]);
 
   const sendMessage = () => {
     if (authenticated && input.trim()) {
@@ -122,7 +135,7 @@ const Home = () => {
         email: user.email,
         group: currentGroup,
       };
-      socket.emit("message", messageData);
+      socket?.emit("message", messageData);
       setInput("");
     }
   };
@@ -138,7 +151,7 @@ const Home = () => {
   };
 
   const handleCreateGroup = (groupName: string) => {
-    socket.emit("createGroup", groupName);
+    socket?.emit("createGroup", groupName);
     setCurrentGroup(groupName);
     setShowCreateGroup(false);
     joinGroup({ variables: { groupName: groupName } });
@@ -146,7 +159,7 @@ const Home = () => {
   };
 
   const handleJoinGroup = (groupName: string) => {
-    socket.emit("joinGroup", groupName);
+    socket?.emit("joinGroup", groupName);
     setCurrentGroup(groupName);
     setShowJoinGroup(false);
     joinGroup({ variables: { groupName: groupName } });
@@ -154,7 +167,7 @@ const Home = () => {
   };
 
   const handleQuitGroup = (groupName: string) => {
-    socket.emit("quitGroup", groupName);
+    socket?.emit("quitGroup", groupName);
     setCurrentGroup("Global Group");
     quitGroup({ variables: { groupName: groupName } });
     localStorage.setItem("currentGroup", "Global Group");
@@ -172,38 +185,44 @@ const Home = () => {
   const offlineMembers = groupMembersData?.getGroupMembers.filter(
     (member: User) => !member.online
   );
-
   return (
-    <div className="flex h-screen p-10 pt-20 lg:p-20 flex-col lg:flex-row lg:justify-between gap-10">
-      <div className="bg-white w-full rounded-2xl bg-opacity-10 relative pt-2 order-2 lg:order-1 flex-1">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className="px-4 pt-2 text-white flex gap-3 items-center"
-          >
-            <div>
-              <img
-                className="w-8 h-8 rounded-full inline-block"
-                src={message.profilePic || userImage}
-                alt="profile"
-              />
-            </div>
-            <div>
+    <div className="flex h-screen p-10 pt-20 lg:p-20 flex-col lg:flex-row lg:justify-between gap-10 ">
+      <div
+        className="flex flex-col justify-between bg-white w-full rounded-2xl bg-opacity-10 pt-2 order-2 lg:order-1 flex-1 overflow-y-auto  "
+        ref={scrollContainerRef}
+      >
+        <div>
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className="px-4 pt-2 text-white flex gap-3 items-center"
+            >
               <div>
-                <span
-                  className={`font-bold ${
-                    message.username === user.username ? "text-yellow-400" : ""
-                  }`}
-                >
-                  {message.username}
-                </span>{" "}
-                : <span className="text-sm">{message.timestamp}</span>
+                <img
+                  className="w-8 h-8 rounded-full inline-block"
+                  src={message.profilePic || userImage}
+                  alt="profile"
+                />
               </div>
-              <div> {message.message}</div>
+              <div>
+                <div>
+                  <span
+                    className={`font-bold ${
+                      message.username === user.username
+                        ? "text-yellow-400"
+                        : ""
+                    }`}
+                  >
+                    {message.username}
+                  </span>{" "}
+                  : <span className="text-sm">{message.timestamp}</span>
+                </div>
+                <div> {message.message}</div>
+              </div>
             </div>
-          </div>
-        ))}
-        <div className="absolute w-full bottom-0 p-4">
+          ))}
+        </div>
+        <div className=" w-full bottom-0 p-4">
           <div className="bg-white  flex justify-center items-center px-4 rounded-2xl">
             <FilePlus2 className="opacity-60 hover:opacity-100 cursor-pointer" />
             <input
@@ -290,44 +309,48 @@ const Home = () => {
             <p className="text-red-500">Error loading members.</p>
           )}
           {groupMembersData && (
-            <ul className="space-y-2">
-              <li className="text-sm text-gray-400">Online Members:</li>
-              {onlineMembers && onlineMembers.length > 0 ? (
-                onlineMembers.map((member: User) => (
-                  <li
-                    key={member.username}
-                    className="flex items-center space-x-2"
-                  >
-                    <img
-                      src={member.profilePic || userImage}
-                      alt="profile"
-                      className="w-6 h-6 rounded-full"
-                    />
-                    <span className="text-sm">{member.username}</span>
-                    <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-sm text-gray-400">No online members</li>
-              )}
-              <li className="text-sm text-gray-400">Offline Members:</li>
-              {offlineMembers && offlineMembers.length > 0 ? (
-                offlineMembers.map((member: User) => (
-                  <li
-                    key={member.username}
-                    className="flex items-center space-x-2"
-                  >
-                    <img
-                      src={member.profilePic || userImage}
-                      alt="profile"
-                      className="w-6 h-6 rounded-full"
-                    />
-                    <span className="text-sm">{member.username}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-sm text-gray-400">No offline members</li>
-              )}
+            <ul className="flex justify-between lg:flex-col">
+              <div>
+                <li className="text-sm text-gray-400">Online Members:</li>
+                {onlineMembers && onlineMembers.length > 0 ? (
+                  onlineMembers.map((member: User) => (
+                    <li
+                      key={member.username}
+                      className="flex items-center space-x-2 p-1"
+                    >
+                      <img
+                        src={member.profilePic || userImage}
+                        alt="profile"
+                        className="w-6 h-6 rounded-full"
+                      />
+                      <span className="text-sm">{member.username}</span>
+                      <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-sm text-red-400">No online members</li>
+                )}
+              </div>
+              <div>
+                <li className="text-sm text-gray-400 ">Offline Members:</li>
+                {offlineMembers && offlineMembers.length > 0 ? (
+                  offlineMembers.map((member: User) => (
+                    <li
+                      key={member.username}
+                      className="flex items-center space-x-2 p-1"
+                    >
+                      <img
+                        src={member.profilePic || userImage}
+                        alt="profile"
+                        className="w-6 h-6 rounded-full"
+                      />
+                      <span className="text-sm">{member.username}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-sm text-gray-400">No offline members</li>
+                )}
+              </div>
             </ul>
           )}
         </div>
