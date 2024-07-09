@@ -61,6 +61,7 @@ const Home = () => {
       scrollContainerRef.current.scrollTop =
         scrollContainerRef.current.scrollHeight;
     }
+    console.log("messages", messages);
   }, [messages]);
 
   useEffect(() => {
@@ -93,7 +94,6 @@ const Home = () => {
       setMessages(formattedMessages);
     });
     socket?.on("initMessages", (initMessages) => {
-      console.log("initMessages", initMessages);
       if (initMessages.group === currentGroup) {
         setMessages((prevMessages) => [
           ...prevMessages,
@@ -106,7 +106,6 @@ const Home = () => {
       }
     });
     socket?.on("message", (message) => {
-      console.log("initMessages", message);
       if (message.group === currentGroup) {
         setMessages((prevMessages) => [
           ...prevMessages,
@@ -175,7 +174,9 @@ const Home = () => {
 
   const handleNavigateToGroup = (groupName: string) => {
     localStorage.setItem("currentGroup", groupName);
+    socket?.emit("joinGroup", groupName);
     setCurrentGroup(groupName);
+    setMessages([]);
     setShowJoinGroup(false);
   };
 

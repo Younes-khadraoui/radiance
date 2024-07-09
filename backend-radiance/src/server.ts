@@ -70,17 +70,8 @@ const io = new SocketServer(httpServer, {
 io.on("connection", async (socket) => {
   console.log("New client connected");
 
-  socket.join(GLOBAL_GROUP);
-  try {
-    const globalGroupMessages = await Message.find({ group: GLOBAL_GROUP })
-      .sort({ timestamp: -1 })
-      .limit(50);
-    socket.emit("groupMessages", globalGroupMessages.reverse());
-  } catch (error) {
-    console.error("Error fetching global group messages:", error);
-  }
-
   socket.on("joinGroup", async (groupName) => {
+    console.log(`Joining group: ${groupName}`);
     try {
       socket.join(groupName);
       const groupMessages = await Message.find({ group: groupName })
@@ -105,6 +96,7 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("message", async (message) => {
+    console.log("Message received:", message);
     try {
       const { username, message: msg, email, group } = message;
 
@@ -118,17 +110,10 @@ io.on("connection", async (socket) => {
 
       await newMessage.save();
 
-      if (group) {
-        io.to(group).emit("message", {
-          ...message,
-          timestamp: newMessage.timestamp.toLocaleString(),
-        });
-      } else {
-        io.to(GLOBAL_GROUP).emit("message", {
-          ...message,
-          timestamp: newMessage.timestamp.toLocaleString(),
-        });
-      }
+      io.to(group).emit("message", {
+        ...message,
+        timestamp: newMessage.timestamp.toLocaleString(),
+      });
     } catch (error) {
       console.error("Error saving message to MongoDB:", error);
     }
@@ -143,9 +128,7 @@ io.on("connection", async (socket) => {
         { new: true }
       );
 
-      if (user) {
-        console.log("User online status updated:", user);
-      } else {
+      if (!user) {
         console.log("User with username not found.");
       }
     } catch (error) {
@@ -159,7 +142,7 @@ io.on("connection", async (socket) => {
       );
       if (!updatedUser) {
         console.error(`User with username ${username} not found.`);
-      } else [console.log("User online status updated:", updatedUser)];
+      }
     } catch (error) {
       console.error("Error updating user online status:", error);
     }
